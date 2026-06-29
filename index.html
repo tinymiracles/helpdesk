@@ -1,0 +1,1353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>TinyHelpdesk — On-Demand Citizen Services</title>
+<meta name="description" content="Get government services at your doorstep or walk-in">
+<meta name="theme-color" content="#FF6B35">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+:root{
+  --or:#FF6B35;--ord:#E55A25;--orp:#FFF0EA;
+  --nv:#0F1B2D;--nv2:#1E3A5F;
+  --wh:#FFFFFF;--bg:#F5F7FA;
+  --g1:#F0F2F5;--g2:#E2E6EB;--g3:#B0BEC5;--g4:#607D8B;--g5:#37474F;
+  --gn:#22C55E;--gnp:#DCFCE7;--gnd:#16A34A;
+  --rd:#EF4444;--yl:#F59E0B;--bl:#3B82F6;--blp:#DBEAFE;
+  --r8:8px;--r12:12px;--r16:16px;--r20:20px;--rf:999px;
+  --sh:0 2px 12px rgba(0,0,0,.07);--sh2:0 8px 32px rgba(0,0,0,.14);
+  --mw:480px;
+}
+html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#1A1A2E;overflow:hidden;}
+#app{
+  width:100%;max-width:var(--mw);height:100vh;
+  margin:0 auto;background:var(--bg);
+  display:flex;flex-direction:column;overflow:hidden;position:relative;
+  box-shadow:0 0 60px rgba(0,0,0,.5);
+}
+@media(min-width:481px){
+  body{display:flex;align-items:center;justify-content:center;}
+  #app{border-radius:24px;height:min(900px,95vh);}
+}
+
+/* ── NAV ── */
+.nav{background:var(--wh);padding:12px 16px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--g2);flex-shrink:0;z-index:10;}
+.nav-back{width:36px;height:36px;border-radius:50%;background:var(--g1);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;visibility:hidden;}
+.nav-back.vis{visibility:visible;}
+.nav-title{flex:1;font-size:17px;font-weight:800;color:var(--nv);}
+.nav-logo{color:var(--or);}
+.nav-act{width:36px;height:36px;border-radius:50%;background:var(--g1);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;}
+
+/* ── SCROLL ── */
+.scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+.scroll::-webkit-scrollbar{display:none;}
+
+/* ── TABS ── */
+.tabs{background:var(--wh);border-top:1px solid var(--g2);display:flex;flex-shrink:0;}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:8px 4px 10px;border:none;background:none;cursor:pointer;position:relative;}
+.tab-ic{font-size:22px;color:var(--g3);}
+.tab-lbl{font-size:10px;font-weight:600;color:var(--g3);}
+.tab.on .tab-ic,.tab.on .tab-lbl{color:var(--or);}
+.tab-bdg{position:absolute;top:4px;right:calc(50% - 16px);background:var(--rd);color:#fff;font-size:9px;font-weight:800;padding:1px 4px;border-radius:10px;display:none;}
+
+/* ── SCREENS ── */
+.screen{display:none;}
+.screen.on{display:block;animation:fadein .18s ease;}
+@keyframes fadein{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+
+/* ─────────────────────────────────────────
+   HOME SCREEN
+───────────────────────────────────────── */
+.home-map{
+  height:210px;
+  background:linear-gradient(155deg,#0F2444 0%,#1B3F7A 60%,#1E4FC2 100%);
+  position:relative;overflow:hidden;
+}
+.home-map::before{
+  content:'';position:absolute;inset:0;
+  background-image:linear-gradient(rgba(255,255,255,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.05) 1px,transparent 1px);
+  background-size:44px 44px;
+}
+.map-road-h{position:absolute;height:6px;background:rgba(255,255,255,.12);border-radius:3px;}
+.map-road-v{position:absolute;width:6px;background:rgba(255,255,255,.12);border-radius:3px;}
+.map-pin{position:absolute;animation:pinb 2s ease-in-out infinite;}
+@keyframes pinb{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+
+.search-card{
+  margin:-34px 16px 0;background:var(--wh);
+  border-radius:var(--r20);padding:16px;
+  box-shadow:var(--sh2);position:relative;z-index:2;
+}
+.greet{font-size:12px;color:var(--g4);margin-bottom:3px;}
+.uname{font-size:21px;font-weight:800;color:var(--nv);}
+.sbar{
+  margin-top:14px;display:flex;align-items:center;gap:10px;
+  background:var(--g1);border-radius:var(--rf);padding:12px 16px;
+  border:2px solid transparent;transition:border-color .15s;cursor:text;
+}
+.sbar:focus-within{border-color:var(--or);background:var(--wh);}
+.sbar input{border:none;background:none;outline:none;font-size:14px;color:var(--nv);flex:1;}
+.sbar input::placeholder{color:var(--g3);}
+
+.cats{display:flex;gap:8px;overflow-x:auto;padding:14px 16px 0;scrollbar-width:none;}
+.cats::-webkit-scrollbar{display:none;}
+.cat{flex-shrink:0;padding:7px 14px;border-radius:var(--rf);background:var(--wh);border:1.5px solid var(--g2);font-size:12px;font-weight:600;color:var(--nv);cursor:pointer;transition:all .15s;}
+.cat.on{background:var(--or);color:#fff;border-color:var(--or);}
+
+.sec-title{font-size:11px;font-weight:700;color:var(--g4);text-transform:uppercase;letter-spacing:.6px;padding:14px 16px 8px;}
+
+/* Service grid */
+.svc-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;padding:0 16px;}
+.svc-card{
+  background:var(--wh);border-radius:var(--r16);padding:16px 14px 14px;
+  cursor:pointer;border:2px solid transparent;box-shadow:var(--sh);
+  transition:all .15s;position:relative;overflow:hidden;
+}
+.svc-card:hover,.svc-card:active{border-color:var(--or);}
+.svc-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--or);opacity:0;transition:opacity .15s;}
+.svc-card:hover::before,.svc-card:active::before{opacity:1;}
+.svc-ic{font-size:28px;margin-bottom:10px;}
+.svc-nm{font-size:13px;font-weight:700;color:var(--nv);line-height:1.3;}
+.svc-fr{font-size:10px;color:var(--g4);margin-top:2px;}
+.svc-pr{font-size:18px;font-weight:800;color:var(--or);margin-top:5px;}
+
+/* Nearby scroll */
+.pscroll{display:flex;gap:10px;overflow-x:auto;padding:0 16px;scrollbar-width:none;}
+.pscroll::-webkit-scrollbar{display:none;}
+.pmini{flex-shrink:0;width:118px;background:var(--wh);border-radius:var(--r16);padding:14px 10px;text-align:center;box-shadow:var(--sh);cursor:pointer;border:1.5px solid var(--g2);transition:all .15s;}
+.pmini:hover{border-color:var(--or);}
+.pav{width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,var(--or),#FF9E6D);color:#fff;font-size:18px;font-weight:800;display:flex;align-items:center;justify-content:center;margin:0 auto 8px;}
+.pmn{font-size:11px;font-weight:700;color:var(--nv);}
+.pdi{font-size:10px;color:var(--g4);margin-top:2px;}
+.prt{font-size:10px;color:var(--nv);margin-top:3px;font-weight:600;}
+
+/* ─────────────────────────────────────────
+   BOOK SCREEN — Uber-style tier selection
+───────────────────────────────────────── */
+.bmap{
+  height:195px;
+  background:linear-gradient(155deg,#0F2444,#1E4FC2);
+  position:relative;overflow:hidden;
+}
+.bmap::before{
+  content:'';position:absolute;inset:0;
+  background-image:linear-gradient(rgba(255,255,255,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.05) 1px,transparent 1px);
+  background-size:44px 44px;
+}
+.bmap-badge{
+  position:absolute;top:14px;left:14px;
+  background:rgba(255,255,255,.15);backdrop-filter:blur(12px);
+  border-radius:var(--rf);padding:8px 14px;
+  color:#fff;font-size:13px;font-weight:700;
+  display:flex;align-items:center;gap:8px;
+  border:1px solid rgba(255,255,255,.2);
+}
+.bmap-pcount{position:absolute;bottom:14px;right:14px;background:rgba(255,255,255,.95);border-radius:var(--rf);padding:6px 12px;font-size:12px;font-weight:700;color:var(--nv);}
+
+.tier-wrap{
+  background:var(--wh);border-radius:24px 24px 0 0;
+  margin-top:-18px;padding:20px 0 0;position:relative;z-index:2;
+}
+.tier-hd{display:flex;align-items:center;justify-content:space-between;padding:0 16px 14px;}
+.tier-hd-t{font-size:17px;font-weight:800;color:var(--nv);}
+.tier-hd-s{font-size:12px;color:var(--g4);}
+
+/* TIER CARD — core of the Uber experience */
+.tier{
+  display:flex;align-items:center;gap:14px;
+  padding:16px;
+  border-bottom:1px solid var(--g2);
+  cursor:pointer;transition:background .15s;position:relative;
+}
+.tier:last-of-type{border-bottom:none;}
+.tier.sel{background:var(--orp);}
+.tier:active{background:var(--g1);}
+.tier-thumb{
+  width:64px;height:52px;border-radius:12px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:28px;flex-shrink:0;
+}
+.tier-thumb.prem{background:linear-gradient(135deg,#1E3A5F,#2563EB);}
+.tier-thumb.std{background:linear-gradient(135deg,#374151,#6B7280);}
+.tier-thumb.wlk{background:linear-gradient(135deg,#166534,#22C55E);}
+.tier-body{flex:1;}
+.tier-nm{font-size:15px;font-weight:800;color:var(--nv);}
+.tier-ds{font-size:12px;color:var(--g4);margin-top:2px;line-height:1.3;}
+.tier-et{font-size:11px;color:var(--g4);margin-top:5px;}
+.tier-et b{color:var(--nv);}
+.tier-rt{text-align:right;flex-shrink:0;}
+.tier-pr{font-size:19px;font-weight:800;color:var(--nv);}
+.tier-tg{font-size:10px;font-weight:700;padding:3px 8px;border-radius:var(--rf);margin-top:5px;display:inline-block;}
+.tier-tg.spd{background:var(--orp);color:var(--ord);}
+.tier-tg.pop{background:#EEF2FF;color:#4F46E5;}
+.tier-tg.val{background:var(--gnp);color:var(--gnd);}
+.tier-radio{width:22px;height:22px;border-radius:50%;border:2px solid var(--g3);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s;}
+.tier.sel .tier-radio{border-color:var(--or);background:var(--or);}
+.tier.sel .tier-radio::after{content:'✓';color:#fff;font-size:12px;font-weight:800;}
+
+.book-ft{padding:14px 16px;background:var(--wh);border-top:1px solid var(--g2);}
+
+/* ─────────────────────────────────────────
+   ORDER TRACKING SCREEN
+───────────────────────────────────────── */
+.tmap{
+  height:195px;background:linear-gradient(155deg,#0F2444,#1E4FC2);
+  position:relative;
+}
+.tmap-bar{
+  position:absolute;bottom:14px;left:14px;right:14px;
+  background:rgba(255,255,255,.96);backdrop-filter:blur(10px);
+  border-radius:var(--r12);padding:11px 14px;
+  display:flex;align-items:center;gap:10px;
+}
+.tdot{width:10px;height:10px;border-radius:50%;background:var(--gn);box-shadow:0 0 0 3px rgba(34,197,94,.25);animation:dotpulse 1.5s infinite;flex-shrink:0;}
+@keyframes dotpulse{0%,100%{box-shadow:0 0 0 0 rgba(34,197,94,.4)}50%{box-shadow:0 0 0 6px rgba(34,197,94,0)}}
+
+.track-card{
+  background:var(--wh);border-radius:24px 24px 0 0;
+  margin-top:-16px;padding:20px 16px;position:relative;z-index:2;
+}
+.steps{display:flex;flex-direction:column;margin:12px 0;}
+.step{display:flex;gap:14px;align-items:flex-start;padding-bottom:20px;position:relative;}
+.step:not(:last-child)::after{content:'';position:absolute;left:15px;top:32px;bottom:0;width:2px;background:var(--g2);}
+.step.done::after{background:var(--gn);}
+.step-dot{width:32px;height:32px;border-radius:50%;border:2px solid var(--g2);display:flex;align-items:center;justify-content:center;font-size:13px;background:var(--wh);flex-shrink:0;z-index:1;}
+.step.done .step-dot{background:var(--gn);border-color:var(--gn);color:#fff;}
+.step.actv .step-dot{border-color:var(--or);animation:steppulse 1.5s infinite;}
+@keyframes steppulse{0%,100%{box-shadow:0 0 0 0 rgba(255,107,53,.35)}50%{box-shadow:0 0 0 8px rgba(255,107,53,0)}}
+.step-t{font-size:13px;font-weight:700;color:var(--nv);}
+.step-d{font-size:11px;color:var(--g4);margin-top:2px;}
+.step-info{padding-top:5px;}
+
+.chat-wrap{background:var(--g1);border-radius:var(--r16);overflow:hidden;margin-top:16px;}
+.chat-msgs{height:155px;overflow-y:auto;padding:12px;}
+.chat-msgs::-webkit-scrollbar{display:none;}
+.msg{margin-bottom:8px;max-width:80%;}
+.msg.snt{margin-left:auto;}
+.bub{padding:8px 12px;border-radius:14px;font-size:13px;line-height:1.4;display:inline-block;}
+.msg.snt .bub{background:var(--or);color:#fff;border-radius:14px 14px 2px 14px;}
+.msg.rcv .bub{background:var(--wh);color:var(--nv);border-radius:14px 14px 14px 2px;border:1px solid var(--g2);}
+.msg-t{font-size:9px;color:var(--g3);margin-top:2px;text-align:right;}
+.chat-in-row{display:flex;gap:8px;padding:10px 12px;border-top:1px solid var(--g2);background:var(--wh);}
+.chat-inp{flex:1;padding:9px 14px;border:1.5px solid var(--g2);border-radius:var(--rf);font-size:13px;outline:none;}
+.chat-inp:focus{border-color:var(--or);}
+
+/* ─────────────────────────────────────────
+   PROVIDER SCREEN
+───────────────────────────────────────── */
+.online-tog{
+  margin:16px;background:var(--wh);border-radius:var(--r16);padding:16px;
+  display:flex;align-items:center;gap:14px;
+  border:2px solid var(--g2);cursor:pointer;transition:all .2s;box-shadow:var(--sh);
+}
+.online-tog.on{border-color:var(--gn);background:var(--gnp);}
+.ot-ic{width:48px;height:48px;border-radius:50%;background:var(--g2);display:flex;align-items:center;justify-content:center;font-size:22px;transition:background .2s;}
+.on .ot-ic{background:var(--gn);}
+.ot-t{font-size:15px;font-weight:700;color:var(--g5);transition:color .2s;}
+.on .ot-t{color:var(--gnd);}
+.ot-s{font-size:12px;color:var(--g4);margin-top:2px;}
+
+.earn-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:0 16px 16px;}
+.earn-cell{background:var(--wh);border-radius:var(--r12);padding:14px 10px;text-align:center;box-shadow:var(--sh);}
+.earn-v{font-size:22px;font-weight:800;color:var(--or);}
+.earn-l{font-size:10px;color:var(--g4);margin-top:2px;font-weight:600;}
+
+.incoming{
+  margin:0 16px 16px;background:var(--wh);
+  border:2px solid var(--or);border-radius:var(--r16);padding:16px;
+  box-shadow:0 4px 20px rgba(255,107,53,.2);
+  animation:reqin .3s ease;display:none;
+}
+.incoming.show{display:block;}
+@keyframes reqin{from{opacity:0;transform:scale(.97)}to{opacity:1;transform:scale(1)}}
+.cdown-ring{position:relative;width:72px;height:72px;margin:0 auto;}
+.cdown-ring svg{transform:rotate(-90deg);}
+.cdown-n{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800;color:var(--or);}
+.cdown-n.urg{color:var(--rd);animation:urga .5s infinite;}
+@keyframes urga{0%,100%{transform:scale(1)}50%{transform:scale(1.1)}}
+
+.ao{margin:0 16px 16px;background:var(--wh);border-radius:var(--r16);padding:16px;box-shadow:var(--sh);display:none;}
+.ao.show{display:block;}
+
+/* ─────────────────────────────────────────
+   ADMIN SCREEN
+───────────────────────────────────────── */
+.a-stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 16px;}
+.astat{background:var(--wh);border-radius:var(--r16);padding:16px;box-shadow:var(--sh);}
+.astat-v{font-size:28px;font-weight:800;color:var(--nv);}
+.astat-l{font-size:11px;color:var(--g4);margin-top:2px;}
+.astat-d{font-size:11px;font-weight:600;margin-top:8px;}
+.seg{display:flex;background:var(--g1);border-radius:var(--rf);padding:3px;margin:16px;}
+.seg-b{flex:1;padding:8px;border-radius:var(--rf);font-size:12px;font-weight:700;text-align:center;cursor:pointer;color:var(--g4);transition:all .15s;}
+.seg-b.on{background:var(--wh);color:var(--nv);box-shadow:0 1px 4px rgba(0,0,0,.1);}
+
+/* ─────────────────────────────────────────
+   PROFILE SCREEN
+───────────────────────────────────────── */
+.ph-hero{background:linear-gradient(135deg,var(--nv),var(--nv2));padding:28px 20px 36px;text-align:center;}
+.ph-av{width:72px;height:72px;border-radius:20px;background:var(--or);display:flex;align-items:center;justify-content:center;color:#fff;font-size:30px;font-weight:800;margin:0 auto 12px;}
+.ph-nm{font-size:20px;font-weight:800;color:#fff;}
+.ph-sb{font-size:13px;color:rgba(255,255,255,.5);margin-top:4px;}
+
+/* ─────────────────────────────────────────
+   BOTTOM SHEET
+───────────────────────────────────────── */
+.sheet{position:absolute;inset:0;background:rgba(15,27,45,.55);z-index:100;backdrop-filter:blur(4px);display:none;align-items:flex-end;}
+.sheet.show{display:flex;animation:shbg .2s ease;}
+@keyframes shbg{from{background:rgba(15,27,45,0)}}
+.sheet-body{background:var(--wh);border-radius:24px 24px 0 0;width:100%;max-height:90%;overflow-y:auto;scrollbar-width:none;animation:shup .25s ease;padding-bottom:24px;}
+.sheet-body::-webkit-scrollbar{display:none;}
+@keyframes shup{from{transform:translateY(60px);opacity:0}to{transform:none;opacity:1}}
+.sh-handle{width:40px;height:4px;background:var(--g2);border-radius:2px;margin:12px auto 16px;}
+.sh-t{font-size:17px;font-weight:800;color:var(--nv);padding:0 20px 16px;}
+
+/* ─────────────────────────────────────────
+   SEARCH ANIMATION
+───────────────────────────────────────── */
+.search-pulse{width:80px;height:80px;border-radius:50%;background:var(--orp);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;position:relative;}
+.search-pulse::before,.search-pulse::after{content:'';position:absolute;inset:-8px;border-radius:50%;border:2px solid var(--or);animation:spulse 1.5s ease-out infinite;opacity:0;}
+.search-pulse::after{animation-delay:.75s;}
+@keyframes spulse{0%{transform:scale(.8);opacity:.8}100%{transform:scale(1.5);opacity:0}}
+@keyframes dot{0%,80%,100%{transform:scale(.6);opacity:.3}40%{transform:scale(1);opacity:1}}
+@keyframes bouncein{0%{transform:scale(.3);opacity:0}60%{transform:scale(1.1)}80%{transform:scale(.95)}100%{transform:scale(1);opacity:1}}
+
+/* ─────────────────────────────────────────
+   COMMON
+───────────────────────────────────────── */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:none;cursor:pointer;font-weight:700;border-radius:var(--rf);transition:all .15s;font-size:14px;padding:14px 24px;line-height:1;}
+.btn-pr{background:var(--or);color:#fff;}
+.btn-pr:active{background:var(--ord);transform:scale(.98);}
+.btn-full{width:100%;border-radius:var(--r16);}
+.btn-gh{background:var(--g1);color:var(--nv);}
+.btn-suc{background:var(--gn);color:#fff;}
+.btn-suc:active{background:var(--gnd);}
+.btn-dng{background:var(--rd);color:#fff;}
+.btn-sm{font-size:12px;padding:8px 14px;}
+.btn-out{background:var(--orp);color:var(--ord);border:1.5px solid var(--or);}
+
+.badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:var(--rf);font-size:11px;font-weight:700;}
+.bg{background:var(--gnp);color:var(--gnd);}
+.br{background:#FEE2E2;color:#B91C1C;}
+.by{background:#FEF3C7;color:#92400E;}
+.bs{background:var(--orp);color:var(--ord);}
+.bb{background:var(--blp);color:#1D4ED8;}
+
+.card{background:var(--wh);border-radius:var(--r16);margin:0 16px 12px;padding:16px;box-shadow:var(--sh);}
+.card-t{font-size:15px;font-weight:800;color:var(--nv);margin-bottom:4px;}
+.card-s{font-size:12px;color:var(--g4);}
+
+.li{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--g1);cursor:pointer;}
+.li:last-child{border-bottom:none;}
+.li-ic{width:40px;height:40px;border-radius:10px;background:var(--orp);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+.li-nm{font-size:13px;font-weight:700;color:var(--nv);}
+.li-sb{font-size:11px;color:var(--g4);margin-top:2px;}
+.li-rt{margin-left:auto;font-size:15px;font-weight:800;color:var(--gnd);}
+
+.fl{display:block;font-size:11px;font-weight:700;color:var(--g4);margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px;}
+.fi,.fs{width:100%;padding:12px 14px;border:1.5px solid var(--g2);border-radius:var(--r12);font-size:14px;outline:none;background:var(--wh);color:var(--nv);}
+.fi:focus,.fs:focus{border-color:var(--or);}
+.fg{margin-bottom:14px;}
+.fg2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+
+.ai-box{background:linear-gradient(135deg,#EEF2FF,#E0E7FF);border:1px solid #C7D2FE;border-radius:var(--r16);padding:16px;margin:0 16px 12px;}
+.ai-box h4{color:#4F46E5;font-size:13px;font-weight:800;margin-bottom:8px;display:flex;align-items:center;gap:6px;}
+.ai-box p{font-size:13px;color:var(--nv);line-height:1.6;white-space:pre-wrap;}
+
+.vault-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:0 16px;}
+.vi{padding:14px 8px;background:var(--wh);border-radius:var(--r12);text-align:center;cursor:pointer;border:1.5px solid var(--g2);transition:all .15s;box-shadow:var(--sh);}
+.vi.ok{border-color:var(--gn);background:var(--gnp);}
+.vi-ic{font-size:22px;margin-bottom:6px;}
+.vi-nm{font-size:10px;font-weight:700;color:var(--nv);line-height:1.2;}
+.vi-st{font-size:9px;color:var(--g4);margin-top:3px;}
+
+.spin{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite;}
+@keyframes sp{to{transform:rotate(360deg)}}
+
+#toast{
+  position:absolute;bottom:74px;left:50%;
+  transform:translateX(-50%) translateY(30px);
+  background:var(--nv);color:#fff;padding:10px 18px;border-radius:var(--rf);
+  font-size:13px;font-weight:600;white-space:nowrap;opacity:0;
+  transition:all .25s;z-index:9999;box-shadow:var(--sh2);pointer-events:none;
+  max-width:320px;text-align:center;
+}
+#toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- NAV -->
+  <div class="nav" id="nav">
+    <button class="nav-back" id="navBack" onclick="goBack()">←</button>
+    <div class="nav-title" id="navTitle"><span class="nav-logo">Tiny</span>Helpdesk</div>
+    <button class="nav-act" id="navAct" onclick="navActFn()">🔔</button>
+  </div>
+
+  <div class="scroll" id="scrollArea">
+
+  <!-- ══════════════════════════════════
+       HOME
+  ══════════════════════════════════ -->
+  <div class="screen on" id="screen-home">
+    <div class="home-map">
+      <!-- Road lines for map feel -->
+      <div class="map-road-h" style="top:45%;left:0;right:0;"></div>
+      <div class="map-road-v" style="left:35%;top:0;bottom:0;"></div>
+      <div class="map-road-h" style="top:72%;left:0;right:0;"></div>
+      <div class="map-road-v" style="left:68%;top:0;bottom:0;"></div>
+      <div class="map-pin" style="top:28%;left:48%;font-size:36px">📍</div>
+      <div class="map-pin" style="top:50%;left:22%;font-size:20px;animation-delay:.6s">🏪</div>
+      <div class="map-pin" style="top:38%;left:72%;font-size:20px;animation-delay:1.1s">🏪</div>
+      <div class="map-pin" style="top:62%;left:58%;font-size:18px;animation-delay:1.6s">🏪</div>
+    </div>
+
+    <div class="search-card">
+      <div class="greet">Namaste 🙏</div>
+      <div class="uname">Anu ji</div>
+      <div class="sbar">
+        <span>🔍</span>
+        <input id="svcSearch" placeholder="Search for a service..." oninput="filterBySearch(this.value)">
+        <span style="color:var(--g3);font-size:11px;font-weight:600">📍 Mumbai</span>
+      </div>
+    </div>
+
+    <div class="cats">
+      <div class="cat on" onclick="filterCat('all',this)">All</div>
+      <div class="cat" onclick="filterCat('identity',this)">🪪 Identity</div>
+      <div class="cat" onclick="filterCat('scheme',this)">✨ Schemes</div>
+      <div class="cat" onclick="filterCat('certificate',this)">📄 Certificates</div>
+      <div class="cat" onclick="filterCat('payment',this)">⚡ Payments</div>
+    </div>
+
+    <div class="sec-title">Services</div>
+    <div class="svc-grid" id="svcGrid"></div>
+
+    <div class="sec-title" style="margin-top:6px">Nearby Providers</div>
+    <div class="pscroll" id="provScroll"></div>
+    <div style="height:20px"></div>
+  </div>
+
+  <!-- ══════════════════════════════════
+       BOOK — Uber-style tier selection
+  ══════════════════════════════════ -->
+  <div class="screen" id="screen-book">
+    <div class="bmap" id="bmap">
+      <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center">
+        <div style="font-size:40px;animation:pinb 2s ease-in-out infinite">📍</div>
+      </div>
+      <div class="bmap-badge">
+        <span id="bmIcon" style="font-size:20px">🃏</span>
+        <span id="bmName">PAN Card</span>
+      </div>
+      <div class="bmap-pcount" id="bmProvCount">3 providers nearby</div>
+      <!-- Provider dots -->
+      <div style="position:absolute;top:35%;left:18%;font-size:18px;opacity:.75">🏪</div>
+      <div style="position:absolute;top:55%;left:72%;font-size:18px;opacity:.75">🏪</div>
+      <div style="position:absolute;top:22%;left:78%;font-size:16px;opacity:.5">🏪</div>
+    </div>
+
+    <div class="tier-wrap">
+      <div class="tier-hd">
+        <div>
+          <div class="tier-hd-t">Choose your option</div>
+          <div class="tier-hd-s" id="tierSub">Walk-in is cheapest</div>
+        </div>
+        <span class="badge bb" id="tierBadge">PAN Card</span>
+      </div>
+
+      <div id="tierList"></div>
+
+      <div class="book-ft">
+        <button class="btn btn-pr btn-full" id="bookBtn" onclick="startBooking()">
+          Book Now · <span id="bookPrice">₹100</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════
+       TRACKING
+  ══════════════════════════════════ -->
+  <div class="screen" id="screen-order">
+    <div class="tmap">
+      <div style="position:absolute;inset:0;background:linear-gradient(155deg,#0F2444,#1E4FC2);display:flex;align-items:center;justify-content:center">
+        <div style="font-size:36px">🗺️</div>
+      </div>
+      <div class="tmap-bar">
+        <div class="tdot" id="tDot"></div>
+        <div>
+          <div style="font-size:13px;font-weight:700;color:var(--nv)" id="tStatus">Provider confirmed</div>
+          <div style="font-size:11px;color:var(--g4)" id="tETA">Est. 45 min</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="track-card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+        <div>
+          <div style="font-size:17px;font-weight:800;color:var(--nv)" id="ordTitle">PAN Card</div>
+          <div style="font-size:12px;color:var(--g4)" id="ordSub">Walk-in · ₹100</div>
+        </div>
+        <span class="badge bs" id="ordBadge">In Progress</span>
+      </div>
+
+      <!-- Provider row -->
+      <div style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--g1);border-radius:var(--r12);margin-bottom:16px">
+        <div class="pav" style="width:44px;height:44px;border-radius:12px;font-size:18px" id="opAv">D</div>
+        <div style="flex:1">
+          <div style="font-size:14px;font-weight:700;color:var(--nv)" id="opNm">Dinesh GK</div>
+          <div style="font-size:12px;color:var(--g4)" id="opAr">Dharavi · 1.2 km</div>
+          <span class="badge bg" style="margin-top:4px">⭐ 4.8 · 142 reviews</span>
+        </div>
+        <button class="btn btn-gh btn-sm" onclick="showToast('📞 Calling provider...')">📞</button>
+      </div>
+
+      <div class="steps" id="orderSteps"></div>
+
+      <!-- Chat -->
+      <div class="card-t" style="margin-bottom:10px">Chat with Provider</div>
+      <div class="chat-wrap" id="chatWrap">
+        <div class="chat-msgs" id="chatMsgs">
+          <div class="msg rcv"><div class="bub">Namaste! Request accepted. I'm ready for you.</div><div class="msg-t">Just now</div></div>
+        </div>
+        <div class="chat-in-row">
+          <input class="chat-inp" id="chatIn" placeholder="Type a message..." onkeydown="if(event.key==='Enter')sendMsg()">
+          <button class="btn btn-pr btn-sm" onclick="sendMsg()">➤</button>
+        </div>
+      </div>
+
+      <!-- Rating (hidden until done) -->
+      <div id="ratingCard" style="display:none;margin-top:16px;text-align:center">
+        <div style="font-size:42px;margin-bottom:8px">🎉</div>
+        <div style="font-size:18px;font-weight:800;color:var(--nv)">Service Complete!</div>
+        <div style="font-size:12px;color:var(--g4);margin:6px 0 16px">How was your experience?</div>
+        <div id="starsRow" style="display:flex;justify-content:center;gap:10px;font-size:32px;cursor:pointer">★★★★★</div>
+        <textarea class="fi" style="margin-top:12px;border-radius:var(--r12);height:72px;resize:none;font-size:13px" placeholder="Any feedback? (optional)"></textarea>
+        <button class="btn btn-pr btn-full" style="margin-top:12px;border-radius:var(--r12)" onclick="submitRating()">Submit & Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════
+       PROVIDER
+  ══════════════════════════════════ -->
+  <div class="screen" id="screen-provider">
+    <div class="sec-title">Your Profile</div>
+    <div style="display:flex;gap:10px;padding:0 16px 4px;overflow-x:auto;scrollbar-width:none" id="provSelRow"></div>
+
+    <div style="height:12px"></div>
+    <div class="online-tog" id="onlineTog" onclick="toggleOnline()">
+      <div class="ot-ic" id="otIc">🔴</div>
+      <div style="flex:1">
+        <div class="ot-t" id="otTt">Go Online</div>
+        <div class="ot-s" id="otSb">Tap to start receiving orders</div>
+      </div>
+      <div style="font-size:20px;color:var(--g3)" id="otSw">→</div>
+    </div>
+
+    <!-- Incoming request -->
+    <div class="incoming" id="incoming">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div style="font-size:15px;font-weight:800;color:var(--nv)">⚡ New Request!</div>
+        <span class="badge bs" id="incSvc">PAN Card</span>
+      </div>
+      <div style="font-size:13px;color:var(--g4);margin-bottom:14px">
+        <div id="incCit">Meena Devi · Doorstep Standard</div>
+        <div style="margin-top:4px" id="incInfo">📍 0.8 km · ₹85 payout</div>
+      </div>
+      <div style="text-align:center;margin-bottom:14px">
+        <div class="cdown-ring">
+          <svg width="72" height="72" viewBox="0 0 72 72">
+            <circle cx="36" cy="36" r="30" fill="none" stroke="var(--g2)" stroke-width="5"/>
+            <circle id="cdCirc" cx="36" cy="36" r="30" fill="none" stroke="var(--or)" stroke-width="5"
+              stroke-dasharray="188.5" stroke-dashoffset="0" stroke-linecap="round"/>
+          </svg>
+          <div class="cdown-n" id="cdN">15</div>
+        </div>
+        <div style="font-size:11px;color:var(--g4);margin-top:6px">Auto-declines in <span id="cdS">15</span>s</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <button class="btn btn-dng btn-full" onclick="declineReq()">✕ Decline</button>
+        <button class="btn btn-suc btn-full" onclick="acceptReq()">✓ Accept</button>
+      </div>
+    </div>
+
+    <!-- Active order -->
+    <div class="ao" id="ao">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div class="card-t">Active Order</div>
+        <span class="badge by">In Progress</span>
+      </div>
+      <div style="background:var(--g1);border-radius:var(--r12);padding:12px;margin-bottom:12px;font-size:13px">
+        <strong id="aoSvc">PAN Card</strong> · <span id="aoCit">Meena Devi</span>
+        <div style="font-size:11px;color:var(--g4);margin-top:3px" id="aoMode">Doorstep · Payout: ₹85</div>
+      </div>
+      <button class="btn btn-suc btn-full" id="markDoneBtn" onclick="markDone()" disabled>Mark as Complete</button>
+    </div>
+
+    <div class="sec-title">Today's Earnings</div>
+    <div class="earn-grid">
+      <div class="earn-cell"><div class="earn-v" id="eOrd">0</div><div class="earn-l">Orders</div></div>
+      <div class="earn-cell"><div class="earn-v" id="eAmt">₹0</div><div class="earn-l">Earned</div></div>
+      <div class="earn-cell"><div class="earn-v">⭐<span id="eRat">4.8</span></div><div class="earn-l">Rating</div></div>
+    </div>
+
+    <div class="sec-title">Recent Orders</div>
+    <div class="card" style="padding:0;overflow:hidden">
+      <div class="li"><div class="li-ic">🃏</div><div><div class="li-nm">PAN Card</div><div class="li-sb">Ramesh Kumar · 10:30 AM</div></div><div class="li-rt">₹85</div></div>
+      <div class="li"><div class="li-ic">🪪</div><div><div class="li-nm">Aadhaar Update</div><div class="li-sb">Savita Bai · 9:15 AM</div></div><div class="li-rt">₹42</div></div>
+      <div class="li"><div class="li-ic">⚡</div><div><div class="li-nm">Bill Payment</div><div class="li-sb">Suresh Yadav · 8:45 AM</div></div><div class="li-rt">₹17</div></div>
+    </div>
+    <div style="height:20px"></div>
+  </div>
+
+  <!-- ══════════════════════════════════
+       ADMIN
+  ══════════════════════════════════ -->
+  <div class="screen" id="screen-admin">
+    <div class="sec-title">Platform Overview</div>
+    <div class="a-stats">
+      <div class="astat"><div class="astat-v">247</div><div class="astat-l">📦 Total Orders</div><div class="astat-d" style="color:var(--gn)">↑ 18% this week</div></div>
+      <div class="astat"><div class="astat-v">3</div><div class="astat-l">🏪 Active Providers</div><div class="astat-d" style="color:var(--yl)">2 pending</div></div>
+      <div class="astat"><div class="astat-v">189</div><div class="astat-l">👥 Citizens Served</div><div class="astat-d" style="color:var(--gn)">↑ 34 this week</div></div>
+      <div class="astat"><div class="astat-v">₹3.7K</div><div class="astat-l">💰 Revenue</div><div class="astat-d" style="color:var(--gn)">↑ 22% monthly</div></div>
+    </div>
+    <div class="seg">
+      <div class="seg-b on" onclick="adminTab('services',this)">Services</div>
+      <div class="seg-b" onclick="adminTab('providers',this)">Providers</div>
+      <div class="seg-b" onclick="adminTab('settings',this)">Settings</div>
+    </div>
+    <div id="atab-services">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:0 16px;margin-bottom:10px">
+        <div style="font-size:14px;font-weight:700" id="svcCount">8 Services</div>
+        <button class="btn btn-out btn-sm" onclick="showSheet('addSvcSheet')">+ Add</button>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden" id="adminSvcList"></div>
+    </div>
+    <div id="atab-providers" style="display:none">
+      <div class="card" style="padding:0;overflow:hidden" id="adminProvList"></div>
+    </div>
+    <div id="atab-settings" style="display:none">
+      <div class="card">
+        <div class="card-t" style="margin-bottom:14px">Dispatch Settings</div>
+        <div class="fg"><label class="fl">Commission Rate (%)</label><input class="fi" type="number" value="15"></div>
+        <div class="fg"><label class="fl">Dispatch Timeout (s)</label><input class="fi" type="number" value="15"></div>
+        <div class="fg"><label class="fl">Search Radius (km)</label><input class="fi" type="number" value="5"></div>
+        <div class="fg"><label class="fl">Doorstep Surcharge (₹)</label><input class="fi" type="number" value="30"></div>
+        <button class="btn btn-pr btn-full" onclick="showToast('✅ Settings saved!')">Save Settings</button>
+      </div>
+      <div class="card">
+        <div class="card-t" style="margin-bottom:14px">Feature Toggles</div>
+        <div id="togglesList"></div>
+      </div>
+    </div>
+    <div style="height:20px"></div>
+  </div>
+
+  <!-- ══════════════════════════════════
+       PROFILE
+  ══════════════════════════════════ -->
+  <div class="screen" id="screen-profile">
+    <div class="ph-hero">
+      <div class="ph-av">A</div>
+      <div class="ph-nm">Anu Sharma</div>
+      <div class="ph-sb">Mumbai · Citizen Account</div>
+    </div>
+    <div class="sec-title" style="margin-top:4px">Quick Actions</div>
+    <div class="card" style="padding:0;overflow:hidden">
+      <div class="li" onclick="showSheet('vaultSheet')"><div class="li-ic" style="background:var(--blp)">🔐</div><div><div class="li-nm">My Document Vault</div><div class="li-sb">2 documents stored</div></div><div style="margin-left:auto;color:var(--g3);font-size:18px">›</div></div>
+      <div class="li" onclick="showSheet('schemeSheet')"><div class="li-ic" style="background:#EEF2FF">✨</div><div><div class="li-nm">Check Scheme Eligibility</div><div class="li-sb">AI-powered · Free</div></div><div style="margin-left:auto;color:var(--g3);font-size:18px">›</div></div>
+      <div class="li" onclick="showToast('📱 Switch to Provider tab to register')"><div class="li-ic" style="background:var(--orp)">🏪</div><div><div class="li-nm">Register as Provider</div><div class="li-sb">Start earning with TinyHelpdesk</div></div><div style="margin-left:auto;color:var(--g3);font-size:18px">›</div></div>
+    </div>
+    <div class="sec-title">Past Orders</div>
+    <div class="card" style="padding:0;overflow:hidden">
+      <div class="li"><div class="li-ic">🪪</div><div><div class="li-nm">Aadhaar Update</div><div class="li-sb">Dinesh GK · 2 days ago</div></div><span class="badge bg">Done</span></div>
+      <div class="li"><div class="li-ic">🏥</div><div><div class="li-nm">Ayushman Bharat</div><div class="li-sb">Priti SC · 1 week ago</div></div><span class="badge bg">Done</span></div>
+      <div class="li"><div class="li-ic">⚡</div><div><div class="li-nm">Bill Payment</div><div class="li-sb">Dinesh GK · 2 weeks ago</div></div><span class="badge bg">Done</span></div>
+    </div>
+    <div style="padding:20px;text-align:center;font-size:11px;color:var(--g3);line-height:1.6">
+      TinyHelpdesk v1.0 · Tiny Miracles Foundation<br>Making government services accessible for everyone
+    </div>
+  </div>
+
+  </div><!-- /scroll -->
+
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab on" data-s="home" onclick="switchTab('home',this)">
+      <span class="tab-ic">🏠</span><span class="tab-lbl">Home</span>
+    </button>
+    <button class="tab" data-s="provider" onclick="switchTab('provider',this)">
+      <span class="tab-ic">🏪</span><span class="tab-lbl">Provider</span>
+      <div class="tab-bdg" id="provBdg">1</div>
+    </button>
+    <button class="tab" data-s="admin" onclick="switchTab('admin',this)">
+      <span class="tab-ic">⚙️</span><span class="tab-lbl">Admin</span>
+    </button>
+    <button class="tab" data-s="profile" onclick="switchTab('profile',this)">
+      <span class="tab-ic">👤</span><span class="tab-lbl">Profile</span>
+    </button>
+  </div>
+
+  <!-- SHEETS -->
+  <div class="sheet" id="searchSheet">
+    <div class="sheet-body" style="text-align:center;padding-bottom:40px">
+      <div class="sh-handle"></div>
+      <div class="search-pulse"><span style="font-size:32px">🔍</span></div>
+      <div style="font-size:18px;font-weight:800;color:var(--nv)" id="searchSvcName">PAN Card</div>
+      <div style="font-size:13px;color:var(--g4);margin:8px 0 20px">Finding nearest available provider...</div>
+      <div style="display:flex;justify-content:center;gap:6px">
+        <div style="width:8px;height:8px;border-radius:50%;background:var(--or);animation:dot 1.2s infinite"></div>
+        <div style="width:8px;height:8px;border-radius:50%;background:var(--or);animation:dot 1.2s .4s infinite"></div>
+        <div style="width:8px;height:8px;border-radius:50%;background:var(--or);animation:dot 1.2s .8s infinite"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sheet" id="foundSheet">
+    <div class="sheet-body" style="text-align:center;padding-bottom:32px">
+      <div class="sh-handle"></div>
+      <div style="font-size:44px;margin-bottom:8px">✅</div>
+      <div style="font-size:18px;font-weight:800;color:var(--nv)">Provider Found!</div>
+      <div style="font-size:13px;color:var(--g4);margin:6px 20px 20px">Dispatch sent · Waiting for confirmation...</div>
+      <div style="margin:0 20px 20px;background:var(--g1);border-radius:var(--r16);padding:16px;text-align:left">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div class="pav" style="width:44px;height:44px;border-radius:12px" id="foundAv">D</div>
+          <div>
+            <div style="font-size:15px;font-weight:800;color:var(--nv)" id="foundNm">Dinesh GK</div>
+            <div style="font-size:12px;color:var(--g4)" id="foundAr">Dharavi · 1.2 km away</div>
+            <span class="badge bg" style="margin-top:6px">⭐ 4.8 rating</span>
+          </div>
+        </div>
+      </div>
+      <div style="font-size:12px;color:var(--g4)">Provider has 15 seconds to accept</div>
+    </div>
+  </div>
+
+  <div class="sheet" id="confirmedSheet">
+    <div class="sheet-body" style="text-align:center;padding-bottom:40px">
+      <div class="sh-handle"></div>
+      <div style="font-size:52px;margin-bottom:12px;animation:bouncein .5s ease">🎉</div>
+      <div style="font-size:20px;font-weight:800;color:var(--nv)">Booking Confirmed!</div>
+      <div style="font-size:13px;color:var(--g4);margin:8px 20px 20px" id="cnfSub">Dinesh GK accepted your request</div>
+      <div style="margin:0 20px 20px;background:var(--gnp);border:1.5px solid var(--gn);border-radius:var(--r16);padding:16px">
+        <div style="font-size:13px;color:var(--gnd);font-weight:700" id="cnfDet">PAN Card · Walk-in · ₹100</div>
+        <div style="font-size:12px;color:var(--gnd);margin-top:4px" id="cnfETA">Est. 45 minutes</div>
+      </div>
+      <button class="btn btn-pr" style="padding:14px 36px;border-radius:var(--r16)" onclick="goToTracker()">Track Live →</button>
+    </div>
+  </div>
+
+  <div class="sheet" id="vaultSheet">
+    <div class="sheet-body">
+      <div class="sh-handle"></div>
+      <div class="sh-t">🔐 Document Vault</div>
+      <div style="font-size:12px;color:var(--g4);padding:0 20px 16px;line-height:1.5">Encrypted & stored securely. Only you can access them.</div>
+      <div class="vault-grid" id="vaultGrid"></div>
+      <div style="margin:16px 16px 0;padding:12px;background:var(--blp);border-radius:var(--r12);font-size:12px;color:#1D4ED8">🔒 AES-256 encrypted. DigiLocker integration in Phase 2.</div>
+      <div style="padding:16px"><button class="btn btn-gh btn-full" onclick="hideSheet('vaultSheet')">Close</button></div>
+    </div>
+  </div>
+
+  <div class="sheet" id="schemeSheet">
+    <div class="sheet-body">
+      <div class="sh-handle"></div>
+      <div class="sh-t">✨ Scheme Eligibility</div>
+      <div id="schemeForm" style="padding:0 20px 24px">
+        <div style="font-size:12px;color:var(--g4);margin-bottom:16px;line-height:1.5">Tell us about yourself — AI finds government schemes you qualify for.</div>
+        <div class="fg2">
+          <div class="fg"><label class="fl">Age</label><input type="number" class="fi" id="sAge" placeholder="35"></div>
+          <div class="fg"><label class="fl">Income (₹/yr)</label><input type="number" class="fi" id="sIncome" placeholder="120000"></div>
+        </div>
+        <div class="fg"><label class="fl">Occupation</label>
+          <select class="fs" id="sOcc"><option value="">Select</option><option>Daily wage worker</option><option>Farmer</option><option>Small business owner</option><option>Domestic worker</option><option>Construction worker</option><option>Unemployed</option></select>
+        </div>
+        <div class="fg"><label class="fl">Category</label>
+          <select class="fs" id="sCat"><option value="">Select</option><option>General</option><option>OBC</option><option>SC</option><option>ST</option><option>DNT</option><option>Minority</option></select>
+        </div>
+        <button class="btn btn-pr btn-full" id="schemeBtn" onclick="checkSchemes()">Check My Eligibility</button>
+      </div>
+      <div id="schemeResult" style="display:none;padding:0 20px 24px">
+        <div class="ai-box" id="schemeResultBox"><h4>✨ Checking...</h4><p>Loading...</p></div>
+        <button class="btn btn-gh btn-full" style="margin-top:12px" onclick="resetScheme()">← Check Again</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="sheet" id="addSvcSheet">
+    <div class="sheet-body">
+      <div class="sh-handle"></div>
+      <div class="sh-t">Add New Service</div>
+      <div style="padding:0 20px 24px">
+        <div class="fg2">
+          <div class="fg"><label class="fl">Name</label><input class="fi" id="nN" placeholder="e.g. Caste Certificate"></div>
+          <div class="fg"><label class="fl">Category</label><select class="fs" id="nC"><option>identity</option><option>certificate</option><option>scheme</option><option>payment</option></select></div>
+        </div>
+        <div class="fg2">
+          <div class="fg"><label class="fl">Price (₹)</label><input type="number" class="fi" id="nP" placeholder="80"></div>
+          <div class="fg"><label class="fl">Time (min)</label><input type="number" class="fi" id="nT" placeholder="45"></div>
+        </div>
+        <button class="btn btn-pr btn-full" onclick="addSvc()">Add Service</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+</div><!-- /app -->
+
+<script>
+/* ─── DATA ─── */
+const SVCS = [
+  {id:1, name:'Aadhaar Update', icon:'🪪', price:50,  ds:80,  dsp:95,  time:30, cat:'identity'},
+  {id:2, name:'PAN Card',       icon:'🃏', price:100, ds:130, dsp:160, time:45, cat:'identity'},
+  {id:3, name:'Income Cert.',   icon:'📄', price:80,  ds:110, dsp:140, time:60, cat:'certificate'},
+  {id:4, name:'PM Kisan',       icon:'🌾', price:60,  ds:90,  dsp:110, time:45, cat:'scheme'},
+  {id:5, name:'Ayushman Bharat',icon:'🏥', price:75,  ds:105, dsp:135, time:60, cat:'scheme'},
+  {id:6, name:'Passport Help',  icon:'🛂', price:200, ds:230, dsp:280, time:90, cat:'identity'},
+  {id:7, name:'Bill Payment',   icon:'⚡', price:20,  ds:50,  dsp:65,  time:10, cat:'payment'},
+  {id:8, name:'Scholarship',    icon:'🎓', price:90,  ds:120, dsp:150, time:60, cat:'scheme'},
+];
+
+// Tiers: most expensive → cheapest (Uber-style ordering)
+const TIERS = [
+  { key:'priority', name:'Doorstep Priority', icon:'⚡', desc:'Provider at your door — priority slot, fastest processing', tag:'Fastest', tagCls:'spd', thumb:'prem', priceKey:'dsp', timeFactor:0.75 },
+  { key:'doorstep', name:'Doorstep Standard', icon:'🏠', desc:'Provider comes to your home or office', tag:'Popular', tagCls:'pop', thumb:'std', priceKey:'ds', timeFactor:1.0 },
+  { key:'walkin',   name:'Walk-in',           icon:'🏢', desc:'Visit the nearest service center yourself', tag:'Best Value', tagCls:'val', thumb:'wlk', priceKey:'price', timeFactor:1.0 },
+];
+
+const PROVS = [
+  {id:1, name:'Dinesh Grahak Kendra', area:'Dharavi, Mumbai',  dist:'1.2 km', init:'D', svcs:[1,2,3,7], rating:4.8, rev:142, earn:{o:5,a:385}},
+  {id:2, name:'Priti Subh Chintak',   area:'Govandi, Mumbai',  dist:'2.4 km', init:'P', svcs:[2,1,4,5,8], rating:4.9, rev:98,  earn:{o:3,a:255}},
+  {id:3, name:'Shweta Dwar Madat',    area:'Kalwa, Thane',     dist:'3.1 km', init:'S', svcs:[2,1,3,6,7], rating:4.7, rev:67,  earn:{o:4,a:320}},
+];
+
+const DOCS = [
+  {name:'Aadhaar Card', icon:'🪪', ok:true},  {name:'Ration Card', icon:'📋', ok:true},
+  {name:'Income Cert.', icon:'📄', ok:false}, {name:'PAN Card',    icon:'🃏', ok:false},
+  {name:'Birth Cert.',  icon:'📃', ok:false}, {name:'Caste Cert.', icon:'📜', ok:false},
+];
+
+const TOGGLES = [
+  {name:'AI Scheme Eligibility', desc:'Claude-powered recommendations', on:true},
+  {name:'Doorstep Bookings',     desc:'Allow home visit requests',       on:true},
+  {name:'In-App Chat',           desc:'Citizen ↔ Provider messaging',   on:true},
+  {name:'Document Vault',        desc:'Encrypted citizen doc storage',   on:true},
+];
+
+/* ─── STATE ─── */
+let S = {
+  selSvc:null, selTier:'walkin',
+  curProv:PROVS[0], isOnline:false,
+  cTimer:null, orderActive:false, curFilter:'all',
+};
+
+/* ─── INIT ─── */
+window.onload = () => {
+  renderSvcs('all');
+  renderHomeProvs();
+  renderProvSel();
+  updateProvView();
+  renderAdminSvcs();
+  renderAdminProvs();
+  renderToggles();
+  renderVault();
+};
+
+/* ─── NAV ─── */
+let stack = ['home'];
+
+function switchTab(name, el) {
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
+  el.classList.add('on');
+  stack = [name];
+  showScreen(name);
+  updateNav(name);
+  document.getElementById('scrollArea').scrollTop = 0;
+}
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on'));
+  const el = document.getElementById('screen-'+name);
+  if(el) el.classList.add('on');
+}
+function pushScreen(name) {
+  stack.push(name);
+  showScreen(name);
+  updateNav(name);
+  document.getElementById('scrollArea').scrollTop = 0;
+}
+function goBack() {
+  if(stack.length>1){ stack.pop(); const p=stack[stack.length-1]; showScreen(p); updateNav(p); }
+}
+function updateNav(name) {
+  document.getElementById('navBack').classList.toggle('vis', stack.length>1);
+  const titles = {
+    home:'<span class="nav-logo">Tiny</span>Helpdesk',
+    book: S.selSvc ? S.selSvc.name : 'Book Service',
+    order:'Track Order', provider:'Provider Dashboard',
+    admin:'Admin Panel', profile:'My Profile',
+  };
+  document.getElementById('navTitle').innerHTML = titles[name]||'<span class="nav-logo">Tiny</span>Helpdesk';
+  const acts = {home:'🔔',book:'ℹ️',order:'💬',provider:'📊',admin:'📊',profile:'⚙️'};
+  document.getElementById('navAct').textContent = acts[name]||'🔔';
+}
+function navActFn() {
+  const cur = stack[stack.length-1];
+  if(cur==='home') showToast('🔔 Notifications coming soon');
+  else if(cur==='profile') showSheet('vaultSheet');
+}
+
+/* ─── HOME ─── */
+function renderSvcs(filter) {
+  const list = filter==='all' ? SVCS : SVCS.filter(s=>s.cat===filter);
+  document.getElementById('svcGrid').innerHTML = list.length
+    ? list.map(s=>`
+      <div class="svc-card" onclick="openBook(${s.id})">
+        <div class="svc-ic">${s.icon}</div>
+        <div class="svc-nm">${s.name}</div>
+        <div class="svc-fr">From</div>
+        <div class="svc-pr">₹${s.price}</div>
+      </div>
+    `).join('')
+    : '<div style="grid-column:1/-1;text-align:center;padding:24px;color:var(--g4);font-size:13px">No services found</div>';
+}
+function filterCat(cat, el) {
+  document.querySelectorAll('.cat').forEach(c=>c.classList.remove('on'));
+  el.classList.add('on');
+  S.curFilter = cat;
+  renderSvcs(cat);
+}
+function filterBySearch(q) {
+  if(!q.trim()){ renderSvcs(S.curFilter); return; }
+  const f = SVCS.filter(s=>s.name.toLowerCase().includes(q.toLowerCase())||s.cat.toLowerCase().includes(q.toLowerCase()));
+  document.getElementById('svcGrid').innerHTML = f.length
+    ? f.map(s=>`<div class="svc-card" onclick="openBook(${s.id})"><div class="svc-ic">${s.icon}</div><div class="svc-nm">${s.name}</div><div class="svc-fr">From</div><div class="svc-pr">₹${s.price}</div></div>`).join('')
+    : '<div style="grid-column:1/-1;text-align:center;padding:24px;color:var(--g4);font-size:13px">No results</div>';
+}
+function renderHomeProvs() {
+  document.getElementById('provScroll').innerHTML = PROVS.map(p=>`
+    <div class="pmini" onclick="showToast('📍 ${p.name} · ${p.area}')">
+      <div class="pav">${p.init}</div>
+      <div class="pmn">${p.name.split(' ')[0]}</div>
+      <div class="pdi">${p.dist}</div>
+      <div class="prt">⭐ ${p.rating}</div>
+    </div>
+  `).join('');
+}
+
+/* ─── BOOK (Uber-style) ─── */
+function openBook(id) {
+  S.selSvc = SVCS.find(s=>s.id===id);
+  S.selTier = 'walkin';
+  document.getElementById('bmIcon').textContent = S.selSvc.icon;
+  document.getElementById('bmName').textContent = S.selSvc.name;
+  document.getElementById('tierBadge').textContent = S.selSvc.name;
+  const eligible = PROVS.filter(p=>p.svcs.includes(S.selSvc.id));
+  document.getElementById('bmProvCount').textContent = eligible.length+' providers nearby';
+  renderTiers();
+  pushScreen('book');
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
+  document.querySelector('[data-s="home"]').classList.add('on');
+}
+
+function renderTiers() {
+  document.getElementById('tierList').innerHTML = TIERS.map(t=>{
+    const price = S.selSvc[t.priceKey];
+    const eta = Math.round(S.selSvc.time * t.timeFactor);
+    const sel = t.key === S.selTier;
+    return `
+      <div class="tier${sel?' sel':''}" id="tier-${t.key}" onclick="selectTier('${t.key}')">
+        <div class="tier-thumb ${t.thumb}">
+          <span style="font-size:26px">${t.icon}</span>
+        </div>
+        <div class="tier-body">
+          <div class="tier-nm">${t.name}</div>
+          <div class="tier-ds">${t.desc}</div>
+          <div class="tier-et">⏱ <b>${eta} min</b> estimated</div>
+        </div>
+        <div class="tier-rt">
+          <div class="tier-pr">₹${price}</div>
+          <div class="tier-tg ${t.tagCls}">${t.tag}</div>
+        </div>
+        <div class="tier-radio" id="radio-${t.key}"></div>
+      </div>
+    `;
+  }).join('');
+  updateBookBtn();
+}
+
+function selectTier(key) {
+  S.selTier = key;
+  TIERS.forEach(t=>{
+    const el = document.getElementById('tier-'+t.key);
+    if(el) el.classList.toggle('sel', t.key===key);
+  });
+  updateBookBtn();
+}
+
+function updateBookBtn() {
+  const t = TIERS.find(t=>t.key===S.selTier);
+  if(!t||!S.selSvc) return;
+  document.getElementById('bookBtn').innerHTML = `Book Now · ₹${S.selSvc[t.priceKey]} →`;
+  document.getElementById('tierSub').textContent = t.key==='walkin'?'Walk-in is cheapest':t.key==='doorstep'?'Doorstep Standard — most popular':'Priority — fastest option';
+}
+
+function startBooking() {
+  document.getElementById('searchSvcName').textContent = S.selSvc.name;
+  showSheet('searchSheet');
+  setTimeout(()=>{
+    hideSheet('searchSheet');
+    const p = S.curProv;
+    document.getElementById('foundAv').textContent = p.init;
+    document.getElementById('foundNm').textContent = p.name;
+    document.getElementById('foundAr').textContent = p.area+' · '+p.dist;
+    showSheet('foundSheet');
+    triggerIncoming();
+    setTimeout(()=>{ if(!S.orderActive) autoAccept(); }, 3500);
+  }, 2500);
+}
+
+function autoAccept() {
+  if(S.orderActive) return;
+  hideSheet('foundSheet');
+  const p = S.curProv;
+  const t = TIERS.find(t=>t.key===S.selTier);
+  const price = S.selSvc[t.priceKey];
+  document.getElementById('cnfSub').textContent = p.name+' accepted your request';
+  document.getElementById('cnfDet').textContent = `${S.selSvc.name} · ${t.name} · ₹${price}`;
+  document.getElementById('cnfETA').textContent = `Est. ${Math.round(S.selSvc.time*t.timeFactor)} minutes`;
+  showSheet('confirmedSheet');
+}
+
+function goToTracker() {
+  hideSheet('confirmedSheet');
+  S.orderActive = true;
+  const t = TIERS.find(t=>t.key===S.selTier);
+  const price = S.selSvc[t.priceKey];
+  document.getElementById('ordTitle').textContent = S.selSvc.name;
+  document.getElementById('ordSub').textContent = `${t.name} · ₹${price}`;
+  document.getElementById('opAv').textContent = S.curProv.init;
+  document.getElementById('opNm').textContent = S.curProv.name;
+  document.getElementById('opAr').textContent = S.curProv.area+' · '+S.curProv.dist;
+  document.getElementById('tETA').textContent = `Est. ${Math.round(S.selSvc.time*t.timeFactor)} min`;
+  renderOrderSteps();
+  pushScreen('order');
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
+  document.querySelector('[data-s="home"]').classList.add('on');
+  progressSteps();
+}
+
+function renderOrderSteps() {
+  const steps = [
+    {t:'Order Confirmed',d:'Provider accepted your request',done:true},
+    {t:'Preparing',d:'Getting everything ready',done:true},
+    {t:'In Progress',d:'Processing your service',actv:true},
+    {t:'Completed',d:'Service delivered',done:false},
+  ];
+  document.getElementById('orderSteps').innerHTML = steps.map((s,i)=>`
+    <div class="step ${s.done?'done':s.actv?'actv':''}" id="os${i}">
+      <div class="step-dot">${s.done?'✓':s.actv?'⏳':i+1}</div>
+      <div class="step-info"><div class="step-t">${s.t}</div><div class="step-d">${s.d}</div></div>
+    </div>
+  `).join('');
+}
+
+function progressSteps() {
+  let step = 2;
+  const iv = setInterval(()=>{
+    if(step>=3){
+      clearInterval(iv);
+      const el = document.getElementById('os3');
+      if(el){ el.classList.add('done'); el.querySelector('.step-dot').textContent='✓'; }
+      document.getElementById('ordBadge').textContent='Completed';
+      document.getElementById('ordBadge').className='badge bg';
+      document.getElementById('tStatus').textContent='Service completed! ✅';
+      document.getElementById('tDot').style.background='var(--or)';
+      document.getElementById('ratingCard').style.display='block';
+      document.getElementById('chatWrap').style.display='none';
+      return;
+    }
+    const el = document.getElementById('os'+step);
+    if(el){ el.classList.remove('actv'); el.classList.add('done'); el.querySelector('.step-dot').textContent='✓'; }
+    step++;
+    const nxt = document.getElementById('os'+step);
+    if(nxt) nxt.classList.add('actv');
+  }, 4000);
+}
+
+function sendMsg() {
+  const inp = document.getElementById('chatIn');
+  const msg = inp.value.trim(); if(!msg) return;
+  const area = document.getElementById('chatMsgs');
+  const t = new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  area.innerHTML += `<div class="msg snt"><div class="bub">${msg}</div><div class="msg-t">${t}</div></div>`;
+  inp.value=''; area.scrollTop=area.scrollHeight;
+  setTimeout(()=>{
+    const rs=['Sure, coming right up!','Please bring Aadhaar original.','Almost done, please wait!','Thank you!'];
+    const r=rs[Math.floor(Math.random()*rs.length)];
+    const t2=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+    area.innerHTML+=`<div class="msg rcv"><div class="bub">${r}</div><div class="msg-t">${t2}</div></div>`;
+    area.scrollTop=area.scrollHeight;
+  },1000);
+}
+
+function submitRating() {
+  showToast('⭐ Rating submitted. Thank you!');
+  S.orderActive = false;
+  setTimeout(()=>switchTab('home', document.querySelector('[data-s="home"]')), 1200);
+}
+
+/* ─── PROVIDER ─── */
+function renderProvSel() {
+  document.getElementById('provSelRow').innerHTML = PROVS.map((p,i)=>`
+    <div onclick="switchProv(${i})" id="ps${i}" style="
+      flex-shrink:0;padding:10px 14px;border-radius:var(--r12);cursor:pointer;
+      border:2px solid ${i===0?'var(--or)':'var(--g2)'};
+      background:${i===0?'var(--orp)':'var(--wh)'};
+      text-align:center;transition:all .15s;
+    ">
+      <div style="width:34px;height:34px;border-radius:8px;background:linear-gradient(135deg,var(--or),#FF9E6D);color:#fff;font-size:14px;font-weight:800;display:flex;align-items:center;justify-content:center;margin:0 auto 6px">${p.init}</div>
+      <div style="font-size:11px;font-weight:700;color:var(--nv)">${p.name.split(' ')[0]}</div>
+    </div>
+  `).join('');
+}
+
+function switchProv(idx) {
+  S.curProv = PROVS[idx];
+  PROVS.forEach((_,i)=>{
+    const el=document.getElementById('ps'+i);
+    if(!el) return;
+    el.style.borderColor=i===idx?'var(--or)':'var(--g2)';
+    el.style.background=i===idx?'var(--orp)':'var(--wh)';
+  });
+  updateProvView();
+}
+
+function updateProvView() {
+  const p = S.curProv;
+  document.getElementById('eOrd').textContent = S.isOnline ? p.earn.o : 0;
+  document.getElementById('eAmt').textContent = S.isOnline ? '₹'+p.earn.a : '₹0';
+  document.getElementById('eRat').textContent = p.rating;
+  const tog = document.getElementById('onlineTog');
+  tog.className = 'online-tog'+(S.isOnline?' on':'');
+  document.getElementById('otIc').textContent = S.isOnline?'🟢':'🔴';
+  document.getElementById('otTt').textContent = S.isOnline?'Online · Accepting Orders':'Go Online';
+  document.getElementById('otSb').textContent = S.isOnline?'You are receiving live requests':'Tap to start receiving orders';
+  document.getElementById('otSw').textContent = S.isOnline?'✓':'→';
+}
+
+function toggleOnline() {
+  S.isOnline = !S.isOnline;
+  updateProvView();
+  showToast(S.isOnline?'🟢 You are now online!':'⏸ You are now offline.');
+}
+
+function triggerIncoming() {
+  if(!S.isOnline) return;
+  document.getElementById('provBdg').style.display='block';
+  const svc=S.selSvc||SVCS[1];
+  const t=TIERS.find(t=>t.key===S.selTier)||TIERS[2];
+  document.getElementById('incSvc').textContent=svc.name;
+  document.getElementById('incCit').textContent='Meena Devi · '+t.name;
+  const pay=Math.round(svc[t.priceKey]*0.85);
+  document.getElementById('incInfo').textContent='📍 0.8 km · ₹'+pay+' payout';
+  document.getElementById('incoming').classList.add('show');
+  startCdown();
+}
+
+function startCdown() {
+  let sec=15;
+  S.cTimer = setInterval(()=>{
+    sec--;
+    document.getElementById('cdN').textContent=sec;
+    document.getElementById('cdS').textContent=sec;
+    document.getElementById('cdCirc').style.strokeDashoffset=188.5*(1-sec/15);
+    document.getElementById('cdCirc').style.stroke=sec<=5?'var(--rd)':'var(--or)';
+    document.getElementById('cdN').className='cdown-n'+(sec<=5?' urg':'');
+    if(sec<=0){
+      clearCdown();
+      document.getElementById('incoming').classList.remove('show');
+      document.getElementById('provBdg').style.display='none';
+      showToast('⏰ Request timed out — next provider notified');
+      hideSheet('foundSheet');
+    }
+  },1000);
+}
+
+function clearCdown() { if(S.cTimer){clearInterval(S.cTimer);S.cTimer=null;} }
+
+function declineReq() {
+  clearCdown();
+  document.getElementById('incoming').classList.remove('show');
+  document.getElementById('provBdg').style.display='none';
+  showToast('Request declined. Trying next provider...');
+  hideSheet('foundSheet');
+}
+
+function acceptReq() {
+  clearCdown();
+  document.getElementById('incoming').classList.remove('show');
+  document.getElementById('provBdg').style.display='none';
+  const svc=S.selSvc||SVCS[1];
+  const t=TIERS.find(t=>t.key===S.selTier)||TIERS[2];
+  document.getElementById('ao').classList.add('show');
+  document.getElementById('aoSvc').textContent=svc.name;
+  document.getElementById('aoCit').textContent='Meena Devi';
+  const pay=Math.round(svc[t.priceKey]*0.85);
+  document.getElementById('aoMode').textContent=t.name+' · Payout: ₹'+pay;
+  showToast('✅ Request accepted!');
+  hideSheet('foundSheet'); hideSheet('searchSheet');
+  autoAccept();
+  setTimeout(()=>{ document.getElementById('markDoneBtn').disabled=false; }, 5000);
+}
+
+function markDone() {
+  document.getElementById('ao').classList.remove('show');
+  const svc=S.selSvc||SVCS[1];
+  const t=TIERS.find(t=>t.key===S.selTier)||TIERS[2];
+  const pay=Math.round(svc[t.priceKey]*0.85);
+  S.curProv.earn.o++; S.curProv.earn.a+=pay;
+  document.getElementById('eOrd').textContent=S.curProv.earn.o;
+  document.getElementById('eAmt').textContent='₹'+Math.round(S.curProv.earn.a);
+  showToast('💰 Order complete! Earnings credited.');
+}
+
+/* ─── ADMIN ─── */
+function adminTab(tab, el) {
+  document.querySelectorAll('.seg-b').forEach(b=>b.classList.remove('on'));
+  el.classList.add('on');
+  ['services','providers','settings'].forEach(t=>{
+    document.getElementById('atab-'+t).style.display=t===tab?'block':'none';
+  });
+}
+
+function renderAdminSvcs() {
+  document.getElementById('svcCount').textContent = SVCS.length+' Services';
+  document.getElementById('adminSvcList').innerHTML = SVCS.map(s=>`
+    <div class="li">
+      <div class="li-ic">${s.icon}</div>
+      <div><div class="li-nm">${s.name}</div><div class="li-sb">₹${s.price} walk-in · ₹${s.ds} doorstep · ${s.time}min</div></div>
+      <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
+        <span class="badge bg" style="font-size:9px">Active</span>
+        <button class="btn btn-sm btn-gh" style="font-size:10px;padding:4px 10px;border-radius:6px" onclick="showToast('✏️ Edit: ${s.name}')">Edit</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderAdminProvs() {
+  const all=[
+    ...PROVS.map(p=>({...p,status:'active'})),
+    {id:4,name:'Raju Seva Kendra',area:'Kurla',init:'R',status:'pending'},
+    {id:5,name:'Kamla Digital Center',area:'Borivali',init:'K',status:'pending'},
+  ];
+  document.getElementById('adminProvList').innerHTML = all.map(p=>`
+    <div class="li">
+      <div class="pav" style="width:40px;height:40px;border-radius:10px;font-size:16px">${p.init}</div>
+      <div><div class="li-nm">${p.name}</div><div class="li-sb">${p.area}</div></div>
+      <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
+        <span class="badge ${p.status==='active'?'bg':'by'}" style="font-size:9px">${p.status}</span>
+        ${p.status==='pending'?`<button class="btn btn-sm btn-suc" style="font-size:10px;padding:4px 10px;border-radius:6px" onclick="showToast('✅ Verified: ${p.name}')">Verify</button>`:''}
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderToggles() {
+  document.getElementById('togglesList').innerHTML = TOGGLES.map((t,i)=>`
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--g1)">
+      <div><div style="font-size:13px;font-weight:700;color:var(--nv)">${t.name}</div><div style="font-size:11px;color:var(--g4)">${t.desc}</div></div>
+      <label style="position:relative;display:inline-block;width:44px;height:24px;flex-shrink:0">
+        <input type="checkbox" ${t.on?'checked':''} onchange="TOGGLES[${i}].on=this.checked;showToast('Setting updated')" style="opacity:0;width:0;height:0">
+        <span style="position:absolute;cursor:pointer;inset:0;background:${t.on?'var(--gn)':'var(--g3)'};border-radius:24px;transition:.2s">
+          <span style="position:absolute;width:18px;height:18px;left:${t.on?'23':'3'}px;bottom:3px;background:#fff;border-radius:50%;transition:.2s;display:block"></span>
+        </span>
+      </label>
+    </div>
+  `).join('');
+}
+
+function addSvc() {
+  const n=document.getElementById('nN').value;
+  const p=document.getElementById('nP').value;
+  if(!n||!p){showToast('⚠️ Fill service name and price');return;}
+  const price=parseInt(p);
+  SVCS.push({id:SVCS.length+1,name:n,icon:'📄',price,ds:price+30,dsp:price+60,time:parseInt(document.getElementById('nT').value)||45,cat:document.getElementById('nC').value});
+  renderAdminSvcs();
+  renderSvcs(S.curFilter);
+  hideSheet('addSvcSheet');
+  showToast('✅ Service added: '+n);
+}
+
+/* ─── VAULT ─── */
+function renderVault() {
+  document.getElementById('vaultGrid').innerHTML = DOCS.map(d=>`
+    <div class="vi ${d.ok?'ok':''}" onclick="${d.ok?`showToast('🔐 ${d.name} stored securely')`:`showToast('📤 Upload coming in Phase 2')`}">
+      <div class="vi-ic">${d.icon}</div>
+      <div class="vi-nm">${d.name}</div>
+      <div class="vi-st">${d.ok?'✅ Stored':'+ Upload'}</div>
+    </div>
+  `).join('');
+}
+
+/* ─── SCHEME AI ─── */
+function resetScheme() {
+  document.getElementById('schemeForm').style.display='block';
+  document.getElementById('schemeResult').style.display='none';
+  document.getElementById('schemeBtn').disabled=false;
+  document.getElementById('schemeBtn').innerHTML='Check My Eligibility';
+}
+
+async function checkSchemes() {
+  const age=document.getElementById('sAge').value;
+  const inc=document.getElementById('sIncome').value;
+  const occ=document.getElementById('sOcc').value;
+  const cat=document.getElementById('sCat').value;
+  if(!age||!occ||!cat){showToast('⚠️ Fill age, occupation, category');return;}
+  const btn=document.getElementById('schemeBtn');
+  btn.disabled=true; btn.innerHTML='<div class="spin"></div> Checking...';
+  try {
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':'YOUR_API_KEY_HERE','anthropic-version':'2023-06-01'},
+      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1000,
+        messages:[{role:'user',content:`You are TinyHelpdesk's AI scheme assistant (Maharashtra/Mumbai focus).
+Citizen: Age ${age}, income ₹${inc||'not given'}/yr, ${occ}, ${cat} category.
+List 4-5 government schemes they likely qualify for. For each: name, one-line benefit, one key condition they meet. Then name 2 documents needed. End with one encouraging line. Simple English, under 220 words. No preamble.`}]
+      })
+    });
+    const data=await res.json();
+    const text=data.content?.[0]?.text||'Could not load. Try again.';
+    document.getElementById('schemeForm').style.display='none';
+    document.getElementById('schemeResult').style.display='block';
+    document.getElementById('schemeResultBox').innerHTML=`<h4>✨ Your Eligible Schemes</h4><p>${text}</p>`;
+  } catch(e) {
+    document.getElementById('schemeForm').style.display='none';
+    document.getElementById('schemeResult').style.display='block';
+    document.getElementById('schemeResultBox').innerHTML=`
+      <h4>✨ Likely Schemes for You</h4>
+      <p>Based on your profile (${cat}, ${occ}, age ${age}):\n\n1. <strong>PM Ujjwala Yojana</strong> — Free LPG connection\n2. <strong>Ayushman Bharat PMJAY</strong> — ₹5 lakh health cover\n3. <strong>PM Kisan Samman Nidhi</strong> — ₹6,000/year cash transfer\n4. <strong>Maharashtra Gharkul Yojana</strong> — Housing assistance\n\nDocuments needed: Aadhaar card, Ration card.\n\nVisit any TinyHelpdesk provider to apply today!</p>`;
+  }
+  btn.disabled=false; btn.innerHTML='Check My Eligibility';
+}
+
+/* ─── SHEETS ─── */
+function showSheet(id){ document.getElementById(id).classList.add('show'); }
+function hideSheet(id){ document.getElementById(id).classList.remove('show'); }
+document.querySelectorAll('.sheet').forEach(s=>{
+  s.addEventListener('click',e=>{
+    if(e.target===s&&!['searchSheet','foundSheet','confirmedSheet'].includes(s.id)) s.classList.remove('show');
+  });
+});
+
+/* ─── TOAST ─── */
+let tt;
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  clearTimeout(tt); tt=setTimeout(()=>t.classList.remove('show'),2800);
+}
+</script>
+</body>
+</html>
